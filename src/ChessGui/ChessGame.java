@@ -48,10 +48,10 @@ public class ChessGame {
 
     // Sets up and starts a new game
     public void startGame() {
-        gui.setNewGameButtonEnabled(false);
+        gui.setGameInProgress(true);
+
         if (!promptForPlayerNames()) {
-            // Return to original state
-            gui.setNewGameButtonEnabled(true);
+            gui.setGameInProgress(false); // Re-enable if cancelled
             return;
         }
 
@@ -64,8 +64,6 @@ public class ChessGame {
         
         updateTurnAndStatus();
         gui.updateBoard();
-        gui.setNewGameButtonEnabled(true);
-        gui.setResignButtonEnabled(true);
     }
 
     // Returns true if names were entered successfully, false if cancelled.
@@ -187,7 +185,7 @@ public class ChessGame {
         if (isGameOver) return;
         
         isGameOver = true;
-        gui.setResignButtonEnabled(false);
+        gui.setGameInProgress(false); // Game is over, update button states
         
         String resigningPlayerName = currentPlayer.equals("white") ? whitePlayerName : blackPlayerName;
         String winnerColor = getOpponent(currentPlayer);
@@ -208,7 +206,7 @@ public class ChessGame {
         List<int[]> legalMoves = getAllPossibleMoves(currentPlayer);
         if (legalMoves.isEmpty()) {
             isGameOver = true;
-            gui.setResignButtonEnabled(false); 
+            gui.setGameInProgress(false); // Game is over, update button states
             String message;
             if (board.isKingInCheck(currentPlayer)) {
                 String winnerColor = getOpponent(currentPlayer);
@@ -304,6 +302,16 @@ public class ChessGame {
         }
         tempBoard.setEnPassantTarget(board.getEnPassantTarget());
         return tempBoard;
+    }
+    
+    // Gets the match history string
+    public String getMatchHistory() {
+        return playerData.getMatchHistory();
+    }
+
+    // Initiates recalculation of all player rankings
+    public void recalculateRankings() {
+        playerData.recalculateAllRankings();
     }
     
     private String getOpponent(String color) {
