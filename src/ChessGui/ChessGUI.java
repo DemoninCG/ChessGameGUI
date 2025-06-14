@@ -3,6 +3,10 @@ package ChessGui;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ *
+ * @author Corban Guy, Naz Janif
+ */
 public class ChessGUI extends JFrame {
 
     private final BoardPanel boardPanel;
@@ -32,7 +36,7 @@ public class ChessGUI extends JFrame {
         add(boardPanel, BorderLayout.CENTER);
 
         JPanel sidePanel = new JPanel(new BorderLayout(0, 10)); // Vertical gap
-        sidePanel.setPreferredSize(new Dimension(250, 0)); // Wider panel
+        sidePanel.setPreferredSize(new Dimension(350, 0)); // Wider panel
         sidePanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5)); // Add padding
 
         moveLogArea = new JTextArea();

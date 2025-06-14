@@ -12,9 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Manages player and match data using an embedded Apache Derby database.
- * This class handles database connection, table creation, and all
- * read/write operations for player statistics and match history.
+ *
+ * @author Corban Guy, Naz Janif
  */
 public class PlayerData {
     public static final int K = 32; // Elo K-factor for rating calculations
@@ -25,7 +24,7 @@ public class PlayerData {
     private final ChessGame game;
     private Connection dbConnection;
 
-    // Data Transfer Objects (DTOs) for cleaner code
+    // Data transfer objects for cleaner code
     private static class PlayerStats {
         String name;
         int wins;
@@ -70,6 +69,7 @@ public class PlayerData {
         }
     }
 
+    // Create player and match tables if they don't currently exist
     private void createTablesIfNotExists() {
         try (Statement stmt = dbConnection.createStatement()) {
             // Check for PLAYERS table
@@ -108,6 +108,7 @@ public class PlayerData {
         return rs.next();
     }
     
+    // Searches for a player in the database, adds them if they don't exist (new player)
     public void checkOrAddPlayer(String playerName) {
         String sql = "SELECT elo FROM " + PLAYERS_TABLE_NAME + " WHERE name = ?";
         try (PreparedStatement pstmt = dbConnection.prepareStatement(sql)) {
@@ -146,7 +147,7 @@ public class PlayerData {
                 return;
             }
 
-            // --- Elo and Stat Calculation ---
+            // Elo and stat calculation
             double oldWhiteElo = whitePlayer.elo;
             double oldBlackElo = blackPlayer.elo;
             double expectedWhite = 1.0 / (1.0 + Math.pow(10.0, (oldBlackElo - oldWhiteElo) / 400.0));
@@ -164,14 +165,14 @@ public class PlayerData {
             whitePlayer.elo += K * (actualWhiteScore - expectedWhite);
             blackPlayer.elo += K * ((1.0 - actualWhiteScore) - (1.0 - expectedWhite));
 
-            // --- Database Updates in a Transaction ---
+            // Database updates in a transaction
             dbConnection.setAutoCommit(false); // Start transaction
             updatePlayerStatsInDB(whitePlayer);
             updatePlayerStatsInDB(blackPlayer);
             recordMatchInDB(whitePlayerName, blackPlayerName, winnerName);
             dbConnection.commit(); // Commit transaction
 
-            // --- Logging ---
+            // Logging
             game.log("\n--- Elo & Record Updates ---");
             logPlayerUpdate(whitePlayer, oldWhiteElo);
             logPlayerUpdate(blackPlayer, oldBlackElo);
@@ -233,7 +234,7 @@ public class PlayerData {
         Map<String, PlayerStats> currentStatsMap = new HashMap<>();
 
         try {
-            dbConnection.setAutoCommit(false); // --- Start Transaction ---
+            dbConnection.setAutoCommit(false); // Start Transaction
             
             // 1. Reset all player stats in DB to default
             try (Statement stmt = dbConnection.createStatement()) {
@@ -264,7 +265,7 @@ public class PlayerData {
                 }
             }
 
-            // 4. Re-simulate each game's outcome on the in-memory map
+            // 4. Re-simulate each game's outcome
             for (MatchRecord match : allMatches) {
                 PlayerStats white = currentStatsMap.get(match.whitePlayer);
                 PlayerStats black = currentStatsMap.get(match.blackPlayer);
@@ -298,7 +299,7 @@ public class PlayerData {
                 pstmt.executeBatch();
             }
 
-            dbConnection.commit(); // --- Commit Transaction ---
+            dbConnection.commit(); // Commit transaction
             game.log("Recalculation complete. All player stats have been updated.");
 
         } catch (SQLException e) {
@@ -309,7 +310,7 @@ public class PlayerData {
         }
     }
 
-    // --- Helper and Utility Methods from previous version (unchanged) ---
+    // Helper methods
 
     private PlayerStats getPlayerStatsFromDB(String playerName) throws SQLException {
         String sql = "SELECT wins, losses, ties, elo FROM " + PLAYERS_TABLE_NAME + " WHERE name = ?";
@@ -349,8 +350,6 @@ public class PlayerData {
             } catch (SQLException se) {
                 if (!"XJ015".equals(se.getSQLState())) {
                     handleSQLException(se, "Error during database shutdown.");
-                } else {
-                    System.out.println("Derby database shut down successfully.");
                 }
             }
         }));

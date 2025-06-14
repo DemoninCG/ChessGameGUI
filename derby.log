@@ -1,5 +1,8 @@
 ----------------------------------------------------------------
-Sun Jun 15 09:41:28 NZST 2025D001 : [0] The Apache Software Foundation - Apache Derby - 10.17.1.0 - (1913217), [1] a816c00e-0197-7063-f3e4-00000e67d8e0, [2] /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB, [3] jdk.internal.loader.ClassLoaders$AppClassLoader@65b54208, [4] file:/home/corban/Downloads/db-derby-10.17.1.0-bin/lib/derby.jar
+Sun Jun 15 11:07:19 NZST 2025:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.17.1.0 - (1913217): instance a816c00e-0197-70b2-8e29-00000e279298 
+on database directory /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@639fee48 
+Loaded from file:/home/corban/Downloads/db-derby-10.17.1.0-bin/lib/derby.jar
 java.vendor=Red Hat, Inc.
 java.runtime.version=21.0.6+7
 user.dir=/home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI
@@ -7,9 +10,10 @@ os.name=Linux
 os.arch=amd64
 os.version=6.13.7-100.fc40.x86_64
 derby.system.home=null
-C005 : [0] 
+Database Class Loader started - derby.database.classpath=''
 ----------------------------------------------------------------
-J003 : [0] Sun Jun 15 09:42:14 NZST 2025
+Sun Jun 15 11:07:24 NZST 2025: Shutting down Derby engine
 ----------------------------------------------------------------
-Sun Jun 15 09:42:14 NZST 2025D002 : [0] a816c00e-0197-7063-f3e4-00000e67d8e0, [1] /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB, [2] jdk.internal.loader.ClassLoaders$AppClassLoader@65b54208
+Sun Jun 15 11:07:25 NZST 2025:
+Shutting down instance a816c00e-0197-70b2-8e29-00000e279298 on database directory /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@639fee48 
 ----------------------------------------------------------------
