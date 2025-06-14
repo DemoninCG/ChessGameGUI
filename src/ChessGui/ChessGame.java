@@ -1,320 +1,233 @@
 package ChessGui;
 
 import static ChessGui.Board.SIZE;
+import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
-/**
- *
- * @author Corban Guy, Naz Janif
- */
-public class ChessGame 
-{
+public class ChessGame {
 
     private Board board;
     private String currentPlayer;
-    private Scanner scanner;
     private PlayerData playerData;
     private String whitePlayerName;
     private String blackPlayerName;
-    private int gameResult = 0; // 1 = white win, 0 = draw, -1 = black win (white loss)
+    private int gameResult = 0; // 1=white win, 0=draw, -1=black win
+    private boolean isGameOver = false;
 
-    public ChessGame() 
-    {
+    private ChessGUI gui;
+
+    public ChessGame() {
         this.board = new Board();
         this.currentPlayer = "white";
-        this.scanner = new Scanner(System.in);
         this.playerData = new PlayerData();
     }
 
-    public void startGame() 
-    {
-        // Player name handling
-        System.out.println("Welcome to Chess.");
-        String tempName; // Temporary variable to hold input
+    public void setGui(ChessGUI gui) {
+        this.gui = gui;
+    }
 
-        // Get and validate white player's name
+    public Board getBoard() {
+        return this.board;
+    }
+
+    public String getCurrentPlayer() {
+        return this.currentPlayer;
+    }
+
+    public boolean isGameOver() {
+        return this.isGameOver;
+    }
+
+    // This method now only handles the initial setup.
+    public void startGame() {
+        // Player name handling remains in CLI for now
+        System.out.println("Welcome to Chess.");
+        Scanner scanner = new Scanner(System.in);
+        String tempName;
+
+        // --- (Player name input logic is unchanged) ---
         while (true) {
             System.out.print("Enter White player's name: ");
-            tempName = scanner.nextLine().trim(); // Read and trim whitespace
-            
-            // Check for quit command
-            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) {
-                System.out.println("Exiting program.");
-                System.exit(0); // Terminate the program immediately
-            }
-
-            if (tempName.isEmpty()) {
-                 System.out.println("Player name cannot be empty. Please try again.");
-            } else if (tempName.matches("^[a-zA-Z]+$")) { // Regex to ensure letters only (not the only way to handle this)
-                this.whitePlayerName = tempName;
-                break; // Exit loop on valid input
-            } else {
-                System.out.println("Invalid name. Please use letters only (A-Z or a-z). No spaces, numbers, or symbols.");
-            }
+            tempName = scanner.nextLine().trim();
+            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) System.exit(0);
+            if (tempName.isEmpty()) System.out.println("Player name cannot be empty.");
+            else if (tempName.matches("^[a-zA-Z]+$")) { this.whitePlayerName = tempName; break; }
+            else System.out.println("Invalid name. Please use letters only.");
         }
         playerData.checkOrAddPlayer(whitePlayerName);
 
-        // Get and validate black player's name
         while (true) {
             System.out.print("Enter Black player's name: ");
-            tempName = scanner.nextLine().trim(); // Read and trim whitespace
-            
-            // Check for quit command
-            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) {
-                System.out.println("Exiting program.");
-                System.exit(0); // Terminate the program immediately
-            }
-
-            if (tempName.isEmpty()) {
-                System.out.println("Player name cannot be empty. Please try again.");
-            } else if (!tempName.matches("^[a-zA-Z]+$")) {
-                System.out.println("Invalid name. Please use letters only (A-Z or a-z). No spaces, numbers, or symbols.");
-            } else if (tempName.equalsIgnoreCase(this.whitePlayerName)) { // Ensure the same name isn't inputted twice
-                 System.out.println("Black player name cannot be the same as White player name. Please enter a different name.");
-            } else {
-                this.blackPlayerName = tempName;
-                break; // Exit loop on valid input
-            }
+            tempName = scanner.nextLine().trim();
+            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) System.exit(0);
+            if (tempName.isEmpty()) System.out.println("Player name cannot be empty.");
+            else if (!tempName.matches("^[a-zA-Z]+$")) System.out.println("Invalid name. Please use letters only.");
+            else if (tempName.equalsIgnoreCase(this.whitePlayerName)) System.out.println("Black player name cannot be the same as White player name.");
+            else { this.blackPlayerName = tempName; break; }
         }
         playerData.checkOrAddPlayer(blackPlayerName);
-        
+        scanner.close(); // No more console input needed
+
+        // Initialize board and start the game turn
         board.initializeStandardBoard();
-        boolean gameOver = false;
+        System.out.println("\n--- Game Started ---");
+        System.out.println("You can now move pieces on the board. Close the window to exit.");
+        updateTurnAndStatus();
+    }
+    
+    /**
+     * This is the new central method called by the GUI to perform a move.
+     */
+    public void attemptMove(int startRow, int startCol, int endRow, int endCol) {
+        if (isGameOver) return;
 
-        while (!gameOver) {
-            // Display board with pieces
-            board.displayBoard();
-            // Display player name + color
-            String currentTurnPlayerName = currentPlayer.equals("white") ? whitePlayerName : blackPlayerName;
-            System.out.println(currentTurnPlayerName + " (" + currentPlayer.toUpperCase() + ")'s turn.");
-            
-            List<int[]> legalMoves = getAllPossibleMoves(currentPlayer); // Get all valid moves
+        Piece pieceToMove = board.getPiece(startRow, startCol);
+        // Basic validation
+        if (pieceToMove == null || !pieceToMove.getColor().equals(currentPlayer)) {
+            return; // Not your piece or no piece
+        }
 
-            if (board.isKingInCheck(currentPlayer)) { // Player is in check 
-                System.out.println(currentPlayer + " king is in check!");
-                if (legalMoves.isEmpty()) //Checkmate
-                {
-                    String winnerColor = getOpponent(currentPlayer);
-                    String winnerName = winnerColor.equals("white") ? whitePlayerName : blackPlayerName;
-                    System.out.println("Checkmate! " + winnerName + " ("+ winnerColor.toUpperCase() + ") wins.");
-                    gameResult = winnerColor.equals("white") ? 1 : -1; // Set result
-                    // End the game and break the loop
-                    gameOver = true;
-                    continue;
-                }
-            }
-            else // Not in check
-            {
-                if (legalMoves.isEmpty()) // Stalemate
-                {
-                    System.out.println("Stalemate! The game is a draw.");
-                    gameResult = 0; // Set result
-                    // End the game and break the loop
-                    gameOver = true;
-                    continue;
-                }
+        // Use board's move logic which includes check validation
+        if (board.movePiece(startRow, startCol, endRow, endCol, false)) {
+            // Check for pawn promotion
+            if (pieceToMove instanceof Pawn && (endRow == 0 || endRow == 7)) {
+                handlePawnPromotion(endRow, endCol);
             }
             
+            // Switch player and update status
+            switchPlayer();
+            updateTurnAndStatus();
+            checkGameEndConditions();
 
-            System.out.println("Enter your move (e.g., a2 b4, O-O, O-O-O), or type 'q' to quit:");
-            // Convert input to lowercase
-            String moveInput = scanner.nextLine().toLowerCase();
+        } else {
+            // Invalid move message could be shown, but for now, the piece just snaps back.
+            System.err.println("Invalid move attempted from " + getAlgebraic(startRow, startCol) + " to " + getAlgebraic(endRow, endCol));
+        }
 
-            // Quitting the game / resignation
-            if (moveInput.equals("q") || moveInput.equals("quit") || moveInput.equals("r") || moveInput.equals("resign")) 
-            {
+        // Always update the GUI
+        gui.updateBoard();
+    }
+    
+    private void switchPlayer() {
+        currentPlayer = (currentPlayer.equals("white")) ? "black" : "white";
+    }
+    
+    private void updateTurnAndStatus() {
+        String currentTurnPlayerName = currentPlayer.equals("white") ? whitePlayerName : blackPlayerName;
+        String status = String.format("%s's Turn (%s)", currentTurnPlayerName, currentPlayer.toUpperCase());
+        if (board.isKingInCheck(currentPlayer)) {
+            status += " - CHECK!";
+        }
+        gui.setStatusMessage(status);
+    }
+    
+    private void checkGameEndConditions() {
+        List<int[]> legalMoves = getAllPossibleMoves(currentPlayer);
+        if (legalMoves.isEmpty()) {
+            isGameOver = true;
+            if (board.isKingInCheck(currentPlayer)) {
+                // CHECKMATE
                 String winnerColor = getOpponent(currentPlayer);
                 String winnerName = winnerColor.equals("white") ? whitePlayerName : blackPlayerName;
-                System.out.println(currentTurnPlayerName + " (" + currentPlayer.toUpperCase() + ") has resigned. " + winnerName + " (" + winnerColor.toUpperCase() + ") wins.");
-                gameResult = winnerColor.equals("white") ? 1 : -1; // Set result based on who resigned
-                gameOver = true;
-                continue;
+                String message = "Checkmate! " + winnerName + " ("+ winnerColor.toUpperCase() + ") wins.";
+                gui.setStatusMessage(message);
+                JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+                gameResult = winnerColor.equals("white") ? 1 : -1;
+            } else {
+                // STALEMATE
+                String message = "Stalemate! The game is a draw.";
+                gui.setStatusMessage(message);
+                JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+                gameResult = 0;
             }
-
-            int[] moveCoordinates = null;
-            // Kingside castling
-            if (moveInput.equals("0-0") || moveInput.equals("o-o")) 
-            {
-                if (handleCastling("kingside")) 
-                {
-                    currentPlayer = getOpponent(currentPlayer);
-                }
-                continue;
-            }
-            // Queenside castling
-            else if (moveInput.equals("0-0-0") || moveInput.equals("o-o-o")) 
-            {
-                if (handleCastling("queenside")) 
-                {
-                    currentPlayer = getOpponent(currentPlayer);
-                }
-
-                continue;
-            } 
-            // Check for valid move notation
-            else if (isValidMoveFormat(moveInput)) 
-            {
-                moveCoordinates = parseMoveInput(moveInput);
-            } 
-            else 
-            {
-                System.out.println("Invalid move format.");
-                continue;
-            }
-
-            // Handling piece movement
-            if (moveCoordinates != null) 
-            {
-                int startCol = moveCoordinates[0];
-                int startRow = moveCoordinates[1];
-                int endCol = moveCoordinates[2];
-                int endRow = moveCoordinates[3];
-
-                Piece pieceToMove = board.getPiece(startRow, startCol);
-
-                if (pieceToMove != null && pieceToMove.getColor().equals(currentPlayer)) 
-                {
-                    if (board.movePiece(startRow, startCol, endRow, endCol, false)) 
-                    {
-                        // Check for pawn promotion
-                        if (pieceToMove instanceof Pawn && (endRow == 0 || endRow == 7)) 
-                        {
-                            Piece promotedPiece = handlePawnPromotion(endRow, endCol);
-                            if (promotedPiece != null) 
-                            {
-                                board.promotePawn(endRow, endCol, promotedPiece);
-                                currentPlayer = getOpponent(currentPlayer);
-                            } 
-                            else 
-                            {
-                                // If promotion fails (e.g., invalid input), the turn doesn't change
-                                continue;
-                            }
-                        } 
-                        else 
-                        {
-                            currentPlayer = getOpponent(currentPlayer);
-                        }
-                    }
-                } 
-                else if (pieceToMove == null) 
-                {
-                    System.out.println("No piece at the starting position.");
-                } else 
-                {
-                    System.out.println("That's not your piece!");
-                }
-            }
-            System.out.println();
-        }
-        
-        // Update player data based on the result
-        playerData.updateGameResults(whitePlayerName, blackPlayerName, gameResult);
-        
-        scanner.close();
-    }
-
-    private Piece handlePawnPromotion(int row, int col) 
-    {
-        System.out.println("Pawn promotion! Promote to (Q)ueen, (R)ook, (B)ishop, or (K)night?");
-        String choice = scanner.nextLine().trim().toUpperCase();
-        String color = (row == 0) ? "white" : "black"; // Promoted piece keeps the pawn's color
-
-        switch (choice) 
-        {
-            case "Q":
-                return new Queen(color);
-            case "R":
-                return new Rook(color);
-            case "B":
-                return new Bishop(color);
-            case "K":
-                return new Knight(color);
-            default:
-                System.out.println("Invalid promotion choice. Promoting to Queen by default.");
-                return new Queen(color);
+            playerData.updateGameResults(whitePlayerName, blackPlayerName, gameResult);
         }
     }
-
-    private boolean handleCastling(String type) 
-    {
-        int kingRow = (currentPlayer.equals("white")) ? 7 : 0;
-        int kingStartCol = 4;
-        int kingEndCol = (type.equals("kingside")) ? 6 : 2;
-
-        Piece king = board.getPiece(kingRow, kingStartCol);
-
-        if (king instanceof King && king.getColor().equals(currentPlayer)) 
-        {
-            return board.movePiece(kingRow, kingStartCol, kingRow, kingEndCol, false);
-        } 
-        else 
-        {
-            System.out.println("Cannot castle. The king is not in the correct position or has moved.");
-            return false;
+    
+    /**
+     * Gets all valid destination squares for a piece at a given position.
+     * @return A list of Points representing legal (row, col) destinations.
+     */
+    public List<Point> getLegalMovesForPiece(int startRow, int startCol) {
+        List<Point> legalDests = new ArrayList<>();
+        Piece piece = board.getPiece(startRow, startCol);
+        if (piece == null || !piece.getColor().equals(currentPlayer)) {
+            return legalDests; // Return empty list if no piece or not current player's piece
         }
+
+        for (int endRow = 0; endRow < Board.SIZE; endRow++) {
+            for (int endCol = 0; endCol < Board.SIZE; endCol++) {
+                // Create a temporary board to simulate the move
+                Board simulationBoard = createTemporaryBoard();
+                // movePiece on the simulation board returns true if the move is legal (including check prevention)
+                if (simulationBoard.movePiece(startRow, startCol, endRow, endCol, true)) {
+                    legalDests.add(new Point(endRow, endCol));
+                }
+            }
+        }
+        return legalDests;
+    }
+    
+    private void handlePawnPromotion(int row, int col) {
+        String[] options = {"Queen", "Rook", "Bishop", "Knight"};
+        String choice = (String) JOptionPane.showInputDialog(
+            gui, 
+            "Pawn promotion! Choose a piece:", 
+            "Promotion", 
+            JOptionPane.PLAIN_MESSAGE, 
+            null, 
+            options, 
+            "Queen");
+
+        Piece newPiece;
+        String color = (row == 0) ? "white" : "black";
+
+        switch (choice) {
+            case "Rook": newPiece = new Rook(color); break;
+            case "Bishop": newPiece = new Bishop(color); break;
+            case "Knight": newPiece = new Knight(color); break;
+            default: newPiece = new Queen(color); break; // Queen is the default
+        }
+        board.promotePawn(row, col, newPiece);
+    }
+    
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            ChessGame game = new ChessGame();
+            ChessGUI gui = new ChessGUI(game);
+            game.setGui(gui);
+            // Run the initial setup (name input) in a separate thread
+            // so it doesn't block the GUI's Event Dispatch Thread.
+            new Thread(game::startGame).start();
+        });
     }
 
-    private String getOpponent(String color) 
-    {
+    // --- The rest of the helper methods are the same as before ---
+    // (createTemporaryBoard, getAlgebraic, getOpponent, getAllPossibleMoves)
+    // --- They are included here for completeness ---
+
+    private String getOpponent(String color) {
         return (color.equals("white")) ? "black" : "white";
     }
 
-    // Checks valid move notation (e.g. "b2 b4")
-    private boolean isValidMoveFormat(String moveInput) 
-    {
-        return moveInput.matches("^[a-h][1-8] [a-h][1-8]$");
-    }
-
-    // Converts input move notation into start/end rows and columns
-    private int[] parseMoveInput(String moveInput) 
-    {
-        String[] squares = moveInput.split(" ");
-        String startSquare = squares[0];
-        String endSquare = squares[1];
-
-        int startCol = startSquare.charAt(0) - 'a';
-        int startRow = 7 - (startSquare.charAt(1) - '1');
-        int endCol = endSquare.charAt(0) - 'a';
-        int endRow = 7 - (endSquare.charAt(1) - '1');
-
-        return new int[]{startCol, startRow, endCol, endRow};
-    }
-
-    // Returns list of valid moves for a player
     private List<int[]> getAllPossibleMoves(String color) {
         List<int[]> legalMoves = new ArrayList<>();
         for (int startRow = 0; startRow < Board.SIZE; startRow++) {
             for (int startCol = 0; startCol < Board.SIZE; startCol++) {
-                Piece piece = board.getPiece(startRow, startCol);
-                if (piece != null && piece.getColor().equals(color)) {
-                    for (int endRow = 0; endRow < Board.SIZE; endRow++) {
-                        for (int endCol = 0; endCol < Board.SIZE; endCol++) {
-                            // Create a temporary board for each potential move to test
-                            Board simulationBoard = createTemporaryBoard();
-                            
-                            Piece tempPiece = simulationBoard.getPiece(startRow, startCol); // Get piece from sim board
-
-                            // Check if move pattern is possible at all
-                            if (tempPiece != null && tempPiece.canMove(startRow, startCol, endRow, endCol, simulationBoard)) {
-                                
-                                // Attempt the move on the simulation board (simulationBoard.movePiece() handles all validation)
-                                if (simulationBoard.movePiece(startRow, startCol, endRow, endCol, true)) {
-                                    // Move is legal
-                                    legalMoves.add(new int[]{startRow, startCol, endRow, endCol});
-                                }
-                            }
-                        }
+                if (board.getPiece(startRow, startCol) != null && board.getPiece(startRow, startCol).getColor().equals(color)) {
+                    for (Point dest : getLegalMovesForPiece(startRow, startCol)) {
+                        legalMoves.add(new int[]{startRow, startCol, dest.x, dest.y});
                     }
                 }
             }
-        } // Tower of closing brackets tall enough to enter the stratosphere
+        }
         return legalMoves;
     }
 
-    // Returns a new board with duplicates of each piece copied across
     private Board createTemporaryBoard() {
         Board tempBoard = new Board();
         for (int r = 0; r < Board.SIZE; r++) {
@@ -323,41 +236,23 @@ public class ChessGame
                 if (p != null) {
                     try {
                         Piece copy = p.getClass().getDeclaredConstructor(String.class).newInstance(p.getColor());
-                        if (copy instanceof King && p instanceof King) {
-                            ((King)copy).setHasMoved(((King)p).hasMoved());
-                        } else if (copy instanceof Rook && p instanceof Rook) {
-                            ((Rook)copy).setHasMoved(((Rook)p).hasMoved());
-                        }
-                       tempBoard.placePiece(copy, r, c);
+                        if (p instanceof King) ((King)copy).setHasMoved(((King)p).hasMoved());
+                        else if (p instanceof Rook) ((Rook)copy).setHasMoved(((Rook)p).hasMoved());
+                        tempBoard.placePiece(copy, r, c);
                     } catch (Exception e) {
-                        System.err.println("Error creating temporary board piece: " + e.getMessage());
                         e.printStackTrace();
                     }
                 }
             }
         }
-        // Copy en passant target state
-        int[] currentEPTarget = board.getEnPassantTarget();
-        if (currentEPTarget != null) {
-           tempBoard.setEnPassantTarget(currentEPTarget[0], currentEPTarget[1]);
-        }
-
+        tempBoard.setEnPassantTarget(board.getEnPassantTarget());
         return tempBoard;
     }
     
-    // Helper for error messages (returns row/col as algebraic notation)
     public static String getAlgebraic(int row, int col) {
-        if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) {
-            return "Invalid Square";
-        }
+        if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return "Invalid";
         char file = (char) ('a' + col);
         char rank = (char) ('1' + (SIZE - 1 - row));
         return "" + file + rank;
-    }
-    
-    public static void main(String[] args) 
-    {
-        ChessGame game = new ChessGame();
-        game.startGame();
     }
 }
