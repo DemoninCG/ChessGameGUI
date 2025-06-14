@@ -10,7 +10,7 @@ public class Board
     private Piece[][] squares;
     private int[] enPassantTarget; // [row, col] of the square behind the pawn that just moved two squares (null if EP not possible)
     
-    // --- NEW: Constants to describe move results ---
+    // Constants to describe move results for logging
     public static final String MOVE_ILLEGAL = "illegal";
     public static final String MOVE_OK = "ok";
     public static final String MOVE_CASTLE = "castle";
@@ -81,43 +81,9 @@ public class Board
         return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
     }
 
-    public void displayBoard() 
-    {
-        // Long horizontal line
-        System.out.println("  " + ("-").repeat(41));
-        for (int row = 0; row < SIZE; row++) 
-        {
-            System.out.print(8 - row + " |");
-            for (int col = 0; col < SIZE; col++) 
-            {
-                Piece piece = this.squares[row][col];
-                // If point at row/col is a piece
-                if (piece != null) 
-                {
-                    // Display first letter of color and piece name (knight is 'N')
-                    String pieceName = piece.getNameInitial();
-                    String color = piece.getColor().substring(0, 1).toLowerCase();
-                    System.out.print(" " + color + pieceName + " |");
-                } 
-                else 
-                {
-                    System.out.print("    |");
-                }
-            }
-            System.out.println();
-            // Long horizontal line
-            System.out.println("  " + ("-").repeat(41));
-        }
-
-        System.out.println("    a    b    c    d    e    f    g    h");
-    }
-
     // Move piece from start row/col to end row/col
     // silenceInvalid is to prevent messages from popping up while moves are being simulated
-    /**
-     * Move piece from start to end, returns a string indicating the result.
-     * @return A string constant: MOVE_OK, MOVE_CASTLE, MOVE_EN_PASSANT, or MOVE_ILLEGAL.
-     */
+    // Returns a string constant: MOVE_OK, MOVE_CASTLE, MOVE_EN_PASSANT, or MOVE_ILLEGAL
     public String movePiece(int startRow, int startCol, int endRow, int endCol, boolean silenceInvalid) {
         Piece pieceToMove = getPiece(startRow, startCol);
         if (pieceToMove == null) {
@@ -133,14 +99,14 @@ public class Board
             return MOVE_ILLEGAL;
         }
         
-        // ... (check for capturing own piece is the same)
+        // Check for capturing own piece
         Piece destinationPiece = getPiece(endRow, endCol);
         if (!isAttemptingEnPassant && destinationPiece != null && destinationPiece.getColor().equals(pieceToMove.getColor())) {
             if (!silenceInvalid) System.err.println("Cannot capture your own piece.");
             return MOVE_ILLEGAL;
         }
 
-        // --- Simulation and self-check logic (unchanged) ---
+        // Simulation and self-check logic
         Piece actualCapturedPiece = null;
         int capturedPieceRow = -1, capturedPieceCol = -1;
         squares[endRow][endCol] = pieceToMove;
@@ -167,7 +133,6 @@ public class Board
             if (!silenceInvalid) System.err.println("Move puts king in check.");
             return MOVE_ILLEGAL;
         }
-        // --- End of simulation ---
 
         // Move is valid, finalize board state
         this.enPassantTarget = null;

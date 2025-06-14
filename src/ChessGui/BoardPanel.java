@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A JPanel that visually represents the chessboard and its pieces.
- * It handles user input via mouse for moving pieces.
+ *
+ * @author Corban Guy, Naz Janif
  */
 public class BoardPanel extends JPanel {
 
@@ -90,6 +90,7 @@ public class BoardPanel extends JPanel {
         g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
+    // Draws piece icons
     private void drawPiece(Graphics2D g, int row, int col) {
         Piece piece = board.getPiece(row, col);
         if (piece != null) {
@@ -121,9 +122,7 @@ public class BoardPanel extends JPanel {
         }
     }
 
-    /**
-     * Inner class to handle mouse events.
-     */
+    // Inner class to handle mouse events
     private class MouseHandler extends MouseAdapter {
         @Override
         public void mousePressed(MouseEvent e) {

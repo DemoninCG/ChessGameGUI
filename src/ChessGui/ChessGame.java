@@ -7,6 +7,10 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+/**
+ *
+ * @author Corban Guy, Naz Janif
+ */
 public class ChessGame {
 
     private Board board;
@@ -22,7 +26,7 @@ public class ChessGame {
     public ChessGame() {
         this.board = new Board();
         this.currentPlayer = "white";
-        // Pass a reference to this game logic instance to PlayerData
+        // Pass reference to this game logic instance to PlayerData
         this.playerData = new PlayerData(this);
     }
 
@@ -42,12 +46,11 @@ public class ChessGame {
         return this.isGameOver;
     }
 
-    /**
-     * Called by the GUI's "New Game" button. Sets up and starts a new game.
-     */
+    // Sets up and starts a new game
     public void startGame() {
         gui.setNewGameButtonEnabled(false);
         if (!promptForPlayerNames()) {
+            // Return to original state
             gui.setNewGameButtonEnabled(true);
             return;
         }
@@ -62,13 +65,10 @@ public class ChessGame {
         updateTurnAndStatus();
         gui.updateBoard();
         gui.setNewGameButtonEnabled(true);
-        gui.setResignButtonEnabled(true); // Enable resign button now
+        gui.setResignButtonEnabled(true);
     }
 
-    /**
-     * Uses JOptionPane to get player names.
-     * @return true if names were entered successfully, false if cancelled.
-     */
+    // Returns true if names were entered successfully, false if cancelled.
     private boolean promptForPlayerNames() {
         // Get White player's name
         while (true) {
@@ -104,15 +104,13 @@ public class ChessGame {
         return true;
     }
 
-    /**
-     * Central method called by the GUI to perform a move.
-     */
+    // Called by the GUI to try to perform a move
     public void attemptMove(int startRow, int startCol, int endRow, int endCol) {
         if (isGameOver) return;
         Piece pieceToMove = board.getPiece(startRow, startCol);
         if (pieceToMove == null || !pieceToMove.getColor().equals(currentPlayer)) return;
 
-        // Use the new movePiece method that returns a descriptive string
+        // movePiece method returns a descriptive string
         String moveResult = board.movePiece(startRow, startCol, endRow, endCol, false);
 
         // If the move was illegal, log it and do nothing else
@@ -121,7 +119,7 @@ public class ChessGame {
             return;
         }
 
-        // --- Log the successful move based on its type ---
+        // Log the successful move based on its type
         logMove(moveResult, pieceToMove, startRow, startCol, endRow, endCol);
 
         // Check for promotion after a successful move
@@ -129,7 +127,6 @@ public class ChessGame {
             handlePawnPromotion(endRow, endCol);
         }
 
-        // Finalize the turn
         finalizeTurn();
     }
     
@@ -146,19 +143,15 @@ public class ChessGame {
                 break;
             case Board.MOVE_OK:
             default:
-                Piece capturedPiece = board.getPiece(endRow, endCol); // Note: this check is now safe post-move
+                Piece capturedPiece = board.getPiece(endRow, endCol);
                 moveLog = String.format("%s's move: %s from %s to %s.",
                     currentPlayer, piece.getName(), getAlgebraic(startRow, startCol), getAlgebraic(endRow, endCol));
-                // This logic is slightly different; capture info isn't available from board.movePiece
-                // A better approach would be for movePiece to return a MoveResult object.
-                // For now, this is a simple approximation.
                 break;
         }
         log(moveLog);
     }
-
     
-    // This is a new public method for PlayerData to use
+    // Public method for PlayerData to use
     public void log(String message) {
         if (gui != null) {
             gui.logMessage(message);
@@ -167,9 +160,7 @@ public class ChessGame {
         }
     }
     
-     /**
-     * Groups together the actions to take after any successful move.
-     */
+    // Groups together the actions to take after any successful move
     private void finalizeTurn() {
         switchPlayer();
         updateTurnAndStatus();
@@ -177,7 +168,6 @@ public class ChessGame {
         gui.updateBoard();
     }
 
-    // ... (All other methods remain mostly the same, but with logging changes)
     private void switchPlayer() {
         currentPlayer = (currentPlayer.equals("white")) ? "black" : "white";
     }
@@ -192,9 +182,7 @@ public class ChessGame {
         gui.setStatusMessage(status);
     }
     
-    /**
-     * Handles the current player resigning the game.
-     */
+    // Handles the current player resigning the game
     public void resign() {
         if (isGameOver) return;
         
@@ -257,13 +245,10 @@ public class ChessGame {
     }
     
     public static void main(String[] args) {
-        // The main method now only needs to create the ChessGUI object.
-        // The GUI's constructor and event listeners will handle the rest.
+        // GUI's constructor and event listeners will handle the proper start of the game
         SwingUtilities.invokeLater(ChessGUI::new);
     }
     
-    // --- The rest of the helper methods are unchanged, but they are no longer the primary loop drivers ---
-    // (getLegalMovesForPiece, getAllPossibleMoves, createTemporaryBoard, getOpponent, getAlgebraic)
     public List<Point> getLegalMovesForPiece(int startRow, int startCol) {
         List<Point> legalDests = new ArrayList<>();
         Piece piece = board.getPiece(startRow, startCol);
@@ -276,7 +261,6 @@ public class ChessGame {
                 // Create a temporary board to simulate the move
                 Board simulationBoard = createTemporaryBoard();
                 
-                // --- THIS IS THE FIX ---
                 // Get the string result from the move attempt
                 String moveResult = simulationBoard.movePiece(startRow, startCol, endRow, endCol, true);
 

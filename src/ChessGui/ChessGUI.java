@@ -4,9 +4,8 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * The main window for the chess game GUI.
- * It holds the BoardPanel, a status label, a side panel for move logging,
- * and controls for starting a new game.
+ *
+ * @author Corban Guy, Naz Janif
  */
 public class ChessGUI extends JFrame {
 
@@ -31,6 +30,7 @@ public class ChessGUI extends JFrame {
         statusLabel.setFont(new Font("Arial", Font.BOLD, 16));
         add(statusLabel, BorderLayout.NORTH);
 
+        // Chess board panel
         boardPanel = new BoardPanel(game);
         add(boardPanel, BorderLayout.CENTER);
 
@@ -41,6 +41,10 @@ public class ChessGUI extends JFrame {
         moveLogArea = new JTextArea();
         moveLogArea.setEditable(false);
         moveLogArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        moveLogArea.setBackground(Color.DARK_GRAY);
+        moveLogArea.setForeground(Color.WHITE);
+        moveLogArea.setLineWrap(true);
+        moveLogArea.setWrapStyleWord(true);
         JScrollPane logScrollPane = new JScrollPane(moveLogArea);
         sidePanel.add(logScrollPane, BorderLayout.CENTER);
 
@@ -65,25 +69,17 @@ public class ChessGUI extends JFrame {
         setVisible(true);
     }
 
-    /**
-     * Triggers a redraw of the chessboard.
-     */
+    // Triggers a redraw of the chess board
     public void updateBoard() {
         boardPanel.repaint();
     }
 
-    /**
-     * Updates the status message shown to the user (e.g., whose turn it is).
-     * @param message The text to display.
-     */
+    // Updates the status message shown to the user (e.g., whose turn it is)
     public void setStatusMessage(String message) {
         statusLabel.setText(message);
     }
 
-    /**
-     * Appends a message to the move log text area.
-     * @param message The text to log.
-     */
+    // Appends a message to the move log text area
     public void logMessage(String message) {
         // Ensure this GUI update happens on the Event Dispatch Thread
         SwingUtilities.invokeLater(() -> {
@@ -93,26 +89,15 @@ public class ChessGUI extends JFrame {
         });
     }
 
-    /**
-     * Enables or disables the "New Game" button.
-     * @param enabled true to enable, false to disable.
-     */
+    //Enabled/disables certain elements based on whether a game is currently running
     public void setGameControlsEnabled(boolean enabled) {
         newGameButton.setEnabled(enabled);
     }
     
-    /**
-     * Enables or disables the "New Game" button.
-     * @param enabled true to enable, false to disable.
-     */
     public void setNewGameButtonEnabled(boolean enabled) {
         newGameButton.setEnabled(enabled);
     }
     
-    /**
-     * Enables or disables the "Resign" button.
-     * @param enabled true to enable, false to disable.
-     */
     public void setResignButtonEnabled(boolean enabled) {
         resignButton.setEnabled(enabled);
     }

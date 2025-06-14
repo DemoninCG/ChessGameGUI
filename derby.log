@@ -1,0 +1,15 @@
+----------------------------------------------------------------
+Sat Jun 14 21:59:20 NZST 2025D001 : [0] The Apache Software Foundation - Apache Derby - 10.17.1.0 - (1913217), [1] a816c00e-0197-6de1-2053-00000e680bd8, [2] /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB, [3] jdk.internal.loader.ClassLoaders$AppClassLoader@65b54208, [4] file:/home/corban/Downloads/db-derby-10.17.1.0-bin/lib/derby.jar
+java.vendor=Red Hat, Inc.
+java.runtime.version=21.0.6+7
+user.dir=/home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI
+os.name=Linux
+os.arch=amd64
+os.version=6.13.7-100.fc40.x86_64
+derby.system.home=null
+C005 : [0] 
+----------------------------------------------------------------
+J003 : [0] Sat Jun 14 22:00:40 NZST 2025
+----------------------------------------------------------------
+Sat Jun 14 22:00:40 NZST 2025D002 : [0] a816c00e-0197-6de1-2053-00000e680bd8, [1] /home/corban/Downloads/ChessGameCUI-20250430T033143Z-1-001/ChessGameGUI/ChessPlayerDB, [2] jdk.internal.loader.ClassLoaders$AppClassLoader@65b54208
+----------------------------------------------------------------
