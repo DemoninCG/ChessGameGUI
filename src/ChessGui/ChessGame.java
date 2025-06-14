@@ -4,7 +4,6 @@ import static ChessGui.Board.SIZE;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -16,14 +15,15 @@ public class ChessGame {
     private String whitePlayerName;
     private String blackPlayerName;
     private int gameResult = 0; // 1=white win, 0=draw, -1=black win
-    private boolean isGameOver = false;
+    private boolean isGameOver = true; // Game is over until "New Game" is clicked
 
     private ChessGUI gui;
 
     public ChessGame() {
         this.board = new Board();
         this.currentPlayer = "white";
-        this.playerData = new PlayerData();
+        // Pass a reference to this game logic instance to PlayerData
+        this.playerData = new PlayerData(this);
     }
 
     public void setGui(ChessGUI gui) {
@@ -42,76 +42,142 @@ public class ChessGame {
         return this.isGameOver;
     }
 
-    // This method now only handles the initial setup.
+    /**
+     * Called by the GUI's "New Game" button. Sets up and starts a new game.
+     */
     public void startGame() {
-        // Player name handling remains in CLI for now
-        System.out.println("Welcome to Chess.");
-        Scanner scanner = new Scanner(System.in);
-        String tempName;
+        gui.setNewGameButtonEnabled(false);
+        if (!promptForPlayerNames()) {
+            gui.setNewGameButtonEnabled(true);
+            return;
+        }
 
-        // --- (Player name input logic is unchanged) ---
+        isGameOver = false;
+        board.initializeEmptyBoard();
+        board.initializeStandardBoard();
+        currentPlayer = "white";
+        gui.logMessage("\n--- New Game Started ---");
+        gui.logMessage(whitePlayerName + " (White) vs. " + blackPlayerName + " (Black)");
+        
+        updateTurnAndStatus();
+        gui.updateBoard();
+        gui.setNewGameButtonEnabled(true);
+        gui.setResignButtonEnabled(true); // Enable resign button now
+    }
+
+    /**
+     * Uses JOptionPane to get player names.
+     * @return true if names were entered successfully, false if cancelled.
+     */
+    private boolean promptForPlayerNames() {
+        // Get White player's name
         while (true) {
-            System.out.print("Enter White player's name: ");
-            tempName = scanner.nextLine().trim();
-            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) System.exit(0);
-            if (tempName.isEmpty()) System.out.println("Player name cannot be empty.");
-            else if (tempName.matches("^[a-zA-Z]+$")) { this.whitePlayerName = tempName; break; }
-            else System.out.println("Invalid name. Please use letters only.");
+            whitePlayerName = JOptionPane.showInputDialog(gui, "Enter White player's name:", "Player 1", JOptionPane.PLAIN_MESSAGE);
+            if (whitePlayerName == null) return false; // User cancelled
+            whitePlayerName = whitePlayerName.trim();
+            if (whitePlayerName.isEmpty()) {
+                JOptionPane.showMessageDialog(gui, "Player name cannot be empty.", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+            } else if (!whitePlayerName.matches("^[a-zA-Z]+$")) {
+                JOptionPane.showMessageDialog(gui, "Please use letters only (A-Z).", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+            } else {
+                break;
+            }
         }
         playerData.checkOrAddPlayer(whitePlayerName);
 
+        // Get Black player's name
         while (true) {
-            System.out.print("Enter Black player's name: ");
-            tempName = scanner.nextLine().trim();
-            if (tempName.equalsIgnoreCase("q") || tempName.equalsIgnoreCase("quit")) System.exit(0);
-            if (tempName.isEmpty()) System.out.println("Player name cannot be empty.");
-            else if (!tempName.matches("^[a-zA-Z]+$")) System.out.println("Invalid name. Please use letters only.");
-            else if (tempName.equalsIgnoreCase(this.whitePlayerName)) System.out.println("Black player name cannot be the same as White player name.");
-            else { this.blackPlayerName = tempName; break; }
+            blackPlayerName = JOptionPane.showInputDialog(gui, "Enter Black player's name:", "Player 2", JOptionPane.PLAIN_MESSAGE);
+            if (blackPlayerName == null) return false; // User cancelled
+            blackPlayerName = blackPlayerName.trim();
+            if (blackPlayerName.isEmpty()) {
+                JOptionPane.showMessageDialog(gui, "Player name cannot be empty.", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+            } else if (!blackPlayerName.matches("^[a-zA-Z]+$")) {
+                JOptionPane.showMessageDialog(gui, "Please use letters only (A-Z).", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+            } else if (blackPlayerName.equalsIgnoreCase(whitePlayerName)) {
+                JOptionPane.showMessageDialog(gui, "Player names cannot be the same.", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+            } else {
+                break;
+            }
         }
         playerData.checkOrAddPlayer(blackPlayerName);
-        scanner.close(); // No more console input needed
-
-        // Initialize board and start the game turn
-        board.initializeStandardBoard();
-        System.out.println("\n--- Game Started ---");
-        System.out.println("You can now move pieces on the board. Close the window to exit.");
-        updateTurnAndStatus();
+        return true;
     }
-    
+
     /**
-     * This is the new central method called by the GUI to perform a move.
+     * Central method called by the GUI to perform a move.
      */
     public void attemptMove(int startRow, int startCol, int endRow, int endCol) {
         if (isGameOver) return;
-
         Piece pieceToMove = board.getPiece(startRow, startCol);
-        // Basic validation
-        if (pieceToMove == null || !pieceToMove.getColor().equals(currentPlayer)) {
-            return; // Not your piece or no piece
+        if (pieceToMove == null || !pieceToMove.getColor().equals(currentPlayer)) return;
+
+        // Use the new movePiece method that returns a descriptive string
+        String moveResult = board.movePiece(startRow, startCol, endRow, endCol, false);
+
+        // If the move was illegal, log it and do nothing else
+        if (moveResult.equals(Board.MOVE_ILLEGAL)) {
+            log("Invalid move: " + getAlgebraic(startRow, startCol) + " to " + getAlgebraic(endRow, endCol));
+            return;
         }
 
-        // Use board's move logic which includes check validation
-        if (board.movePiece(startRow, startCol, endRow, endCol, false)) {
-            // Check for pawn promotion
-            if (pieceToMove instanceof Pawn && (endRow == 0 || endRow == 7)) {
-                handlePawnPromotion(endRow, endCol);
-            }
-            
-            // Switch player and update status
-            switchPlayer();
-            updateTurnAndStatus();
-            checkGameEndConditions();
+        // --- Log the successful move based on its type ---
+        logMove(moveResult, pieceToMove, startRow, startCol, endRow, endCol);
 
-        } else {
-            // Invalid move message could be shown, but for now, the piece just snaps back.
-            System.err.println("Invalid move attempted from " + getAlgebraic(startRow, startCol) + " to " + getAlgebraic(endRow, endCol));
+        // Check for promotion after a successful move
+        if (pieceToMove instanceof Pawn && (endRow == 0 || endRow == 7)) {
+            handlePawnPromotion(endRow, endCol);
         }
 
-        // Always update the GUI
-        gui.updateBoard();
+        // Finalize the turn
+        finalizeTurn();
     }
     
+    private void logMove(String moveResult, Piece piece, int startRow, int startCol, int endRow, int endCol) {
+        String moveLog;
+        switch (moveResult) {
+            case Board.MOVE_CASTLE:
+                String side = (endCol == 6) ? "kingside (O-O)" : "queenside (O-O-O)";
+                moveLog = String.format("%s castles %s.", currentPlayer, side);
+                break;
+            case Board.MOVE_EN_PASSANT:
+                moveLog = String.format("%s captures via en passant at %s.",
+                    currentPlayer, getAlgebraic(endRow, endCol));
+                break;
+            case Board.MOVE_OK:
+            default:
+                Piece capturedPiece = board.getPiece(endRow, endCol); // Note: this check is now safe post-move
+                moveLog = String.format("%s's move: %s from %s to %s.",
+                    currentPlayer, piece.getName(), getAlgebraic(startRow, startCol), getAlgebraic(endRow, endCol));
+                // This logic is slightly different; capture info isn't available from board.movePiece
+                // A better approach would be for movePiece to return a MoveResult object.
+                // For now, this is a simple approximation.
+                break;
+        }
+        log(moveLog);
+    }
+
+    
+    // This is a new public method for PlayerData to use
+    public void log(String message) {
+        if (gui != null) {
+            gui.logMessage(message);
+        } else {
+            System.out.println(message); // Fallback if GUI isn't ready
+        }
+    }
+    
+     /**
+     * Groups together the actions to take after any successful move.
+     */
+    private void finalizeTurn() {
+        switchPlayer();
+        updateTurnAndStatus();
+        checkGameEndConditions();
+        gui.updateBoard();
+    }
+
+    // ... (All other methods remain mostly the same, but with logging changes)
     private void switchPlayer() {
         currentPlayer = (currentPlayer.equals("white")) ? "black" : "white";
     }
@@ -121,37 +187,83 @@ public class ChessGame {
         String status = String.format("%s's Turn (%s)", currentTurnPlayerName, currentPlayer.toUpperCase());
         if (board.isKingInCheck(currentPlayer)) {
             status += " - CHECK!";
+            gui.logMessage(currentPlayer.toUpperCase() + " is in check!");
         }
         gui.setStatusMessage(status);
+    }
+    
+    /**
+     * Handles the current player resigning the game.
+     */
+    public void resign() {
+        if (isGameOver) return;
+        
+        isGameOver = true;
+        gui.setResignButtonEnabled(false);
+        
+        String resigningPlayerName = currentPlayer.equals("white") ? whitePlayerName : blackPlayerName;
+        String winnerColor = getOpponent(currentPlayer);
+        String winnerName = winnerColor.equals("white") ? whitePlayerName : blackPlayerName;
+        
+        gameResult = winnerColor.equals("white") ? 1 : -1;
+        
+        String message = resigningPlayerName + " has resigned. " + winnerName + " wins.";
+        
+        log("\n--- GAME OVER ---");
+        log(message);
+        gui.setStatusMessage(message);
+        JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+        playerData.updateGameResults(whitePlayerName, blackPlayerName, gameResult);
     }
     
     private void checkGameEndConditions() {
         List<int[]> legalMoves = getAllPossibleMoves(currentPlayer);
         if (legalMoves.isEmpty()) {
             isGameOver = true;
+            gui.setResignButtonEnabled(false); 
+            String message;
             if (board.isKingInCheck(currentPlayer)) {
-                // CHECKMATE
                 String winnerColor = getOpponent(currentPlayer);
                 String winnerName = winnerColor.equals("white") ? whitePlayerName : blackPlayerName;
-                String message = "Checkmate! " + winnerName + " ("+ winnerColor.toUpperCase() + ") wins.";
-                gui.setStatusMessage(message);
-                JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+                message = "Checkmate! " + winnerName + " ("+ winnerColor.toUpperCase() + ") wins.";
                 gameResult = winnerColor.equals("white") ? 1 : -1;
             } else {
-                // STALEMATE
-                String message = "Stalemate! The game is a draw.";
-                gui.setStatusMessage(message);
-                JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
+                message = "Stalemate! The game is a draw.";
                 gameResult = 0;
             }
+            gui.logMessage("--- GAME OVER ---");
+            gui.logMessage(message);
+            gui.setStatusMessage(message);
+            JOptionPane.showMessageDialog(gui, message, "Game Over", JOptionPane.INFORMATION_MESSAGE);
             playerData.updateGameResults(whitePlayerName, blackPlayerName, gameResult);
         }
     }
     
-    /**
-     * Gets all valid destination squares for a piece at a given position.
-     * @return A list of Points representing legal (row, col) destinations.
-     */
+    private void handlePawnPromotion(int row, int col) {
+        String[] options = {"Queen", "Rook", "Bishop", "Knight"};
+        String choice = (String) JOptionPane.showInputDialog(gui, "Pawn promotion! Choose a piece:", "Promotion", JOptionPane.PLAIN_MESSAGE, null, options, "Queen");
+        if (choice == null) choice = "Queen"; // Default if dialog is closed
+
+        Piece newPiece;
+        String color = (row == 0) ? "white" : "black";
+        switch (choice) {
+            case "Rook": newPiece = new Rook(color); break;
+            case "Bishop": newPiece = new Bishop(color); break;
+            case "Knight": newPiece = new Knight(color); break;
+            default: newPiece = new Queen(color); break;
+        }
+        board.promotePawn(row, col, newPiece);
+        gui.logMessage(currentPlayer + " promoted pawn to a " + choice + ".");
+    }
+    
+    public static void main(String[] args) {
+        // The main method now only needs to create the ChessGUI object.
+        // The GUI's constructor and event listeners will handle the rest.
+        SwingUtilities.invokeLater(ChessGUI::new);
+    }
+    
+    // --- The rest of the helper methods are unchanged, but they are no longer the primary loop drivers ---
+    // (getLegalMovesForPiece, getAllPossibleMoves, createTemporaryBoard, getOpponent, getAlgebraic)
     public List<Point> getLegalMovesForPiece(int startRow, int startCol) {
         List<Point> legalDests = new ArrayList<>();
         Piece piece = board.getPiece(startRow, startCol);
@@ -163,8 +275,13 @@ public class ChessGame {
             for (int endCol = 0; endCol < Board.SIZE; endCol++) {
                 // Create a temporary board to simulate the move
                 Board simulationBoard = createTemporaryBoard();
-                // movePiece on the simulation board returns true if the move is legal (including check prevention)
-                if (simulationBoard.movePiece(startRow, startCol, endRow, endCol, true)) {
+                
+                // --- THIS IS THE FIX ---
+                // Get the string result from the move attempt
+                String moveResult = simulationBoard.movePiece(startRow, startCol, endRow, endCol, true);
+
+                // A move is legal if the result is anything other than "illegal"
+                if (!moveResult.equals(Board.MOVE_ILLEGAL)) {
                     legalDests.add(new Point(endRow, endCol));
                 }
             }
@@ -172,48 +289,6 @@ public class ChessGame {
         return legalDests;
     }
     
-    private void handlePawnPromotion(int row, int col) {
-        String[] options = {"Queen", "Rook", "Bishop", "Knight"};
-        String choice = (String) JOptionPane.showInputDialog(
-            gui, 
-            "Pawn promotion! Choose a piece:", 
-            "Promotion", 
-            JOptionPane.PLAIN_MESSAGE, 
-            null, 
-            options, 
-            "Queen");
-
-        Piece newPiece;
-        String color = (row == 0) ? "white" : "black";
-
-        switch (choice) {
-            case "Rook": newPiece = new Rook(color); break;
-            case "Bishop": newPiece = new Bishop(color); break;
-            case "Knight": newPiece = new Knight(color); break;
-            default: newPiece = new Queen(color); break; // Queen is the default
-        }
-        board.promotePawn(row, col, newPiece);
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            ChessGame game = new ChessGame();
-            ChessGUI gui = new ChessGUI(game);
-            game.setGui(gui);
-            // Run the initial setup (name input) in a separate thread
-            // so it doesn't block the GUI's Event Dispatch Thread.
-            new Thread(game::startGame).start();
-        });
-    }
-
-    // --- The rest of the helper methods are the same as before ---
-    // (createTemporaryBoard, getAlgebraic, getOpponent, getAllPossibleMoves)
-    // --- They are included here for completeness ---
-
-    private String getOpponent(String color) {
-        return (color.equals("white")) ? "black" : "white";
-    }
-
     private List<int[]> getAllPossibleMoves(String color) {
         List<int[]> legalMoves = new ArrayList<>();
         for (int startRow = 0; startRow < Board.SIZE; startRow++) {
@@ -239,9 +314,7 @@ public class ChessGame {
                         if (p instanceof King) ((King)copy).setHasMoved(((King)p).hasMoved());
                         else if (p instanceof Rook) ((Rook)copy).setHasMoved(((Rook)p).hasMoved());
                         tempBoard.placePiece(copy, r, c);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    } catch (Exception e) { e.printStackTrace(); }
                 }
             }
         }
@@ -249,6 +322,10 @@ public class ChessGame {
         return tempBoard;
     }
     
+    private String getOpponent(String color) {
+        return (color.equals("white")) ? "black" : "white";
+    }
+
     public static String getAlgebraic(int row, int col) {
         if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return "Invalid";
         char file = (char) ('a' + col);

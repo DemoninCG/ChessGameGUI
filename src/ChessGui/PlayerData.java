@@ -20,9 +20,11 @@ public class PlayerData {
     private static final String DEFAULT_FILE_PATH = "resources/player_scores.txt";
     private static final String BACKUP_FILE_SUFFIX = ".bak";
     private static final double DEFAULT_ELO = 1000.0; // Starting Elo for new players
+    private final ChessGame game; // New field to reference the game logic
 
     private final Path dataFilePath; // Using Path for modern file operations
     private Map<String, PlayerStats> playerDataMap; // Map to store player data, keyed by player name (lowercase)
+
 
     // Inner class to hold individual player stats
     private static class PlayerStats {
@@ -66,15 +68,16 @@ public class PlayerData {
     }
 
     // Constructor using default file path
-    public PlayerData() {
-        this(DEFAULT_FILE_PATH);
+    public PlayerData(ChessGame game) {
+        this(DEFAULT_FILE_PATH, game);
     }
 
     // Constructor for custom file path
-    public PlayerData(String filePath) {
+    public PlayerData(String filePath, ChessGame game) {
         this.dataFilePath = Paths.get(filePath);
         this.playerDataMap = new HashMap<>();
-        initializeAndLoadData(); // Load data upon instantiation
+        this.game = game; // Store the reference
+        initializeAndLoadData();
     }
 
     // Ensures file system readiness and loads player data
@@ -255,22 +258,23 @@ public class PlayerData {
 
     // Checks if a player exists, and if not, adds them with default stats
     public PlayerStats checkOrAddPlayer(String playerName) {
-        String lowerCaseName = playerName.toLowerCase(); // Use lowercase for lookup
+        String lowerCaseName = playerName.toLowerCase();
         if (playerDataMap.containsKey(lowerCaseName)) {
             double elo = playerDataMap.get(lowerCaseName).elo;
-            System.out.println("Player '" + playerName + "' found. Welcome back. Your current elo is " + elo + ".");
+            game.log("Player '" + playerName + "' found. Elo: " + String.format("%.1f", elo));
             return playerDataMap.get(lowerCaseName);
         } else {
-            System.out.println("Player '" + playerName + "' not found. Adding new player.");
+            game.log("New player '" + playerName + "' added.");
             PlayerStats newPlayer = new PlayerStats(playerName, 0, 0, 0, DEFAULT_ELO);
             playerDataMap.put(lowerCaseName, newPlayer);
-            savePlayerData(); // Save immediately after adding a new player
+            savePlayerData();
             return newPlayer;
         }
     }
 
     // 1 means white won the game, 0 means draw, -1 means white lost the game
     public void updateGameResults(String whitePlayerName, String blackPlayerName, int whiteResult) {
+        // ... (logic is the same)
         PlayerStats whitePlayer = playerDataMap.get(whitePlayerName.toLowerCase());
         PlayerStats blackPlayer = playerDataMap.get(blackPlayerName.toLowerCase());
 
@@ -279,43 +283,27 @@ public class PlayerData {
             return;
         }
 
-        // Elo calculation logic
-        double whiteElo = whitePlayer.elo;
-        double blackElo = blackPlayer.elo;
+        double oldWhiteElo = whitePlayer.elo;
+        double oldBlackElo = blackPlayer.elo;
+        
+        // Elo calculation logic...
+        double expectedWhite = 1.0 / (1.0 + Math.pow(10.0, (oldBlackElo - oldWhiteElo) / 400.0));
+        double expectedBlack = 1.0 - expectedWhite;
+        double actualWhiteScore, actualBlackScore;
 
-        double expectedWhite = 1.0 / (1.0 + Math.pow(10.0, (blackElo - whiteElo) / 400.0));
-        double expectedBlack = 1.0 - expectedWhite; // Expected scores sum to 1
+        if (whiteResult == 1) { /* White wins */ whitePlayer.wins++; blackPlayer.losses++; actualWhiteScore = 1.0; actualBlackScore = 0.0; }
+        else if (whiteResult == -1) { /* Black wins */ whitePlayer.losses++; blackPlayer.wins++; actualWhiteScore = 0.0; actualBlackScore = 1.0; }
+        else { /* Draw */ whitePlayer.draws++; blackPlayer.draws++; actualWhiteScore = 0.5; actualBlackScore = 0.5; }
+        
+        whitePlayer.elo = oldWhiteElo + K * (actualWhiteScore - expectedWhite);
+        blackPlayer.elo = oldBlackElo + K * (actualBlackScore - expectedBlack);
 
-        double actualWhiteScore;
-        double actualBlackScore;
-
-        if (whiteResult == 1) { // White wins
-            whitePlayer.wins++;
-            blackPlayer.losses++;
-            actualWhiteScore = 1.0;
-            actualBlackScore = 0.0;
-        } else if (whiteResult == -1) { // Black wins
-            whitePlayer.losses++;
-            blackPlayer.wins++;
-            actualWhiteScore = 0.0;
-            actualBlackScore = 1.0;
-        } else { // Draw
-            whitePlayer.draws++;
-            blackPlayer.draws++;
-            actualWhiteScore = 0.5;
-            actualBlackScore = 0.5;
-        }
-
-        // Update elo
-        whitePlayer.elo = whiteElo + K * (actualWhiteScore - expectedWhite);
-        blackPlayer.elo = blackElo + K * (actualBlackScore - expectedBlack);
-
-        System.out.printf("%s's new elo: %.1f\n", whitePlayer.name, whitePlayer.elo);
-        System.out.printf("%s's win/draw/loss record: %d/%d/%d\n", whitePlayer.name, whitePlayer.wins, whitePlayer.draws, whitePlayer.losses);
-        System.out.printf("%s's new elo: %.1f\n", blackPlayer.name, blackPlayer.elo);
-        System.out.printf("%s's win/draw/loss record: %d/%d/%d\n", blackPlayer.name, blackPlayer.wins, blackPlayer.draws, blackPlayer.losses);
-
-        // Save the updated data
+        game.log("\n--- Elo & Record Updates ---");
+        game.log(String.format("%s: %.1f -> %.1f Elo", whitePlayer.name, oldWhiteElo, whitePlayer.elo));
+        game.log(String.format("Record: %d W / %d D / %d L", whitePlayer.wins, whitePlayer.draws, whitePlayer.losses));
+        game.log(String.format("%s: %.1f -> %.1f Elo", blackPlayer.name, oldBlackElo, blackPlayer.elo));
+        game.log(String.format("Record: %d W / %d D / %d L", blackPlayer.wins, blackPlayer.draws, blackPlayer.losses));
+        
         savePlayerData();
     }
 }

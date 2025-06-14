@@ -9,6 +9,12 @@ public class Board
     public static final int SIZE = 8;
     private Piece[][] squares;
     private int[] enPassantTarget; // [row, col] of the square behind the pawn that just moved two squares (null if EP not possible)
+    
+    // --- NEW: Constants to describe move results ---
+    public static final String MOVE_ILLEGAL = "illegal";
+    public static final String MOVE_OK = "ok";
+    public static final String MOVE_CASTLE = "castle";
+    public static final String MOVE_EN_PASSANT = "en_passant";
 
     public Board() 
     {
@@ -18,7 +24,7 @@ public class Board
     }
 
     // Creates a (size)-by-(size) 2D array of nulls
-    private void initializeEmptyBoard() 
+    public void initializeEmptyBoard() 
     {
         for (int row = 0; row < SIZE; row++) 
         {
@@ -108,122 +114,91 @@ public class Board
 
     // Move piece from start row/col to end row/col
     // silenceInvalid is to prevent messages from popping up while moves are being simulated
-    public boolean movePiece(int startRow, int startCol, int endRow, int endCol, boolean silenceInvalid) {
+    /**
+     * Move piece from start to end, returns a string indicating the result.
+     * @return A string constant: MOVE_OK, MOVE_CASTLE, MOVE_EN_PASSANT, or MOVE_ILLEGAL.
+     */
+    public String movePiece(int startRow, int startCol, int endRow, int endCol, boolean silenceInvalid) {
         Piece pieceToMove = getPiece(startRow, startCol);
-
         if (pieceToMove == null) {
-            if (!silenceInvalid) System.err.println("No piece at the starting position: " + ChessGame.getAlgebraic(startRow, startCol));
-            return false;
+            if (!silenceInvalid) System.err.println("No piece at start.");
+            return MOVE_ILLEGAL;
         }
 
-        // Pre-move validation stuff
-
-        // Store en passant target from the previous move before checking validity
         int[] currentEnPassantTarget = this.enPassantTarget;
-
-        // Determine if the intended move looks like an attempted en passant
         boolean isAttemptingEnPassant = (pieceToMove instanceof Pawn && currentEnPassantTarget != null && endRow == currentEnPassantTarget[0] && endCol == currentEnPassantTarget[1]);
 
-        // Check if move is valid
         if (!pieceToMove.canMove(startRow, startCol, endRow, endCol, this)) {
-            // Special check for castling input (might fail canMove but be handled elsewhere)
-            if (!(pieceToMove instanceof King && (Math.abs(endCol - startCol) == 2))) {
-                if (!silenceInvalid) System.err.println("Invalid move pattern for " + pieceToMove.getName() + " from " + ChessGame.getAlgebraic(startRow, startCol) + " to " + ChessGame.getAlgebraic(endRow, endCol));
-            } else {
-                // If it was a king move by 2 squares, assume castling attempt failed
-                if (!silenceInvalid) System.err.println("Castling conditions not met or path is not clear/safe.");
-            }
-            return false;
+            if (!silenceInvalid) System.err.println("Invalid move pattern.");
+            return MOVE_ILLEGAL;
         }
-
-        // Check for capturing own piece (only relevant for non-en passant moves)
+        
+        // ... (check for capturing own piece is the same)
         Piece destinationPiece = getPiece(endRow, endCol);
         if (!isAttemptingEnPassant && destinationPiece != null && destinationPiece.getColor().equals(pieceToMove.getColor())) {
-            if (!silenceInvalid) System.err.println("Cannot capture your own piece at " + ChessGame.getAlgebraic(endRow, endCol));
-            return false;
+            if (!silenceInvalid) System.err.println("Cannot capture your own piece.");
+            return MOVE_ILLEGAL;
         }
 
-        // Simulate move and check for self-check
-        String movingPieceColor = pieceToMove.getColor();
-        Piece actualCapturedPiece = null; // Track the piece actually captured/removed
-        int capturedPieceRow = -1, capturedPieceCol = -1; // Track where it was
-
-        // Temporarily move the piece
+        // --- Simulation and self-check logic (unchanged) ---
+        Piece actualCapturedPiece = null;
+        int capturedPieceRow = -1, capturedPieceCol = -1;
         squares[endRow][endCol] = pieceToMove;
         squares[startRow][startCol] = null;
 
-        // If en passant, find and temporarily remove the captured pawn
         if (isAttemptingEnPassant) {
-            capturedPieceRow = startRow;
-            capturedPieceCol = endCol;
-            actualCapturedPiece = getPiece(capturedPieceRow, capturedPieceCol); // Should be the opponent's pawn
-
-            if (actualCapturedPiece instanceof Pawn && !actualCapturedPiece.getColor().equals(movingPieceColor)) {
-                squares[capturedPieceRow][capturedPieceCol] = null; // Remove it for the check validation
-            } else {
-                // This is an internal error if Pawn.canMove was correct
-                System.err.println("ERROR: En passant logic is bugged. Expected pawn at " + ChessGame.getAlgebraic(capturedPieceRow, capturedPieceCol));
-                actualCapturedPiece = null;
-            }
+            capturedPieceRow = startRow; capturedPieceCol = endCol;
+            actualCapturedPiece = getPiece(capturedPieceRow, capturedPieceCol);
+            if (actualCapturedPiece instanceof Pawn && !actualCapturedPiece.getColor().equals(pieceToMove.getColor())) {
+                squares[capturedPieceRow][capturedPieceCol] = null;
+            } else { actualCapturedPiece = null; }
         } else if (destinationPiece != null) {
-            // Standard capture: captured piece was at the destination square
             actualCapturedPiece = destinationPiece;
-            capturedPieceRow = endRow;
-            capturedPieceCol = endCol;
+            capturedPieceRow = endRow; capturedPieceCol = endCol;
         }
 
-        // Store the current en passant target state before potentially modifying it, needed for undo
-        int[] enPassantTargetBeforeCheck = this.enPassantTarget;
-
-        // Check if the king of the moving player is in check after the temporary move
-        boolean inCheckAfterMove = isKingInCheck(movingPieceColor);
-
-        // Undo temporary changes if move is illegal (would cause self-check)
-        if (inCheckAfterMove) {
-            // Move piece back
+        if (isKingInCheck(pieceToMove.getColor())) {
             squares[startRow][startCol] = pieceToMove;
-            // Restore destination square (empty if en passant)
             squares[endRow][endCol] = isAttemptingEnPassant ? null : destinationPiece;
-
-            // If en passant was attempted and a piece was temporarily removed, put it back
             if (isAttemptingEnPassant && actualCapturedPiece != null) {
                 squares[capturedPieceRow][capturedPieceCol] = actualCapturedPiece;
             }
-            // Restore the en passant target state as it was before the move attempt
-            this.enPassantTarget = enPassantTargetBeforeCheck; // Restore original EP target state
-
-            if (!silenceInvalid) System.err.println("Illegal move. This move puts your king in check.");
-            return false;
+            this.enPassantTarget = currentEnPassantTarget;
+            if (!silenceInvalid) System.err.println("Move puts king in check.");
+            return MOVE_ILLEGAL;
         }
+        // --- End of simulation ---
 
         // Move is valid, finalize board state
-
         this.enPassantTarget = null;
+        String moveType = MOVE_OK; // Default return type for a standard move
 
-        // Update 'hasMoved' flags for king and rook for castling rights
         if (pieceToMove instanceof King) {
             ((King) pieceToMove).setHasMoved(true);
-            // Move the rook
-            if (Math.abs(endCol - startCol) == 2) { // Castling move detected
-                int rookStartCol = (endCol > startCol) ? 7 : 0; // Kingside or Queenside
+            if (Math.abs(endCol - startCol) == 2) { // Castling move
+                int rookStartCol = (endCol > startCol) ? 7 : 0;
                 int rookEndCol = (endCol > startCol) ? 5 : 3;
                 Piece rook = getPiece(startRow, rookStartCol);
                 if (rook instanceof Rook) {
                     squares[startRow][rookEndCol] = rook;
                     squares[startRow][rookStartCol] = null;
                     ((Rook) rook).setHasMoved(true);
+                    moveType = MOVE_CASTLE; // Set special return type
                 }
             }
         } else if (pieceToMove instanceof Rook) {
             ((Rook) pieceToMove).setHasMoved(true);
         }
 
-        // Set new en passant target if this move was a two-square pawn advance
         if (pieceToMove instanceof Pawn && Math.abs(endRow - startRow) == 2) {
-            this.enPassantTarget = new int[]{(startRow + endRow) / 2, startCol}; // Set target square behind pawn
+            this.enPassantTarget = new int[]{(startRow + endRow) / 2, startCol};
+        }
+        
+        if (isAttemptingEnPassant) {
+            moveType = MOVE_EN_PASSANT; // Set special return type
         }
 
-        return true;
+        return moveType;
     }
 
     public void promotePawn(int row, int col, Piece newPiece) {
