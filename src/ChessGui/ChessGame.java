@@ -18,7 +18,7 @@ public class ChessGame {
     private PlayerData playerData;
     private String whitePlayerName;
     private String blackPlayerName;
-    private int gameResult = 0; // 1=white win, 0=draw, -1=black win
+    private int gameResult = 0; // 1 = white win, 0 = draw, -1 = black win
     private boolean isGameOver = true; // Game is over until New Game is clicked
 
     private ChessGUI gui;
@@ -28,6 +28,11 @@ public class ChessGame {
         this.currentPlayer = "white";
         // Pass reference to this game logic instance to PlayerData
         this.playerData = new PlayerData(this);
+    }
+    
+    public static void main(String[] args) {
+        // GUI's constructor and event listeners will handle the proper start of the game
+        SwingUtilities.invokeLater(ChessGUI::new);
     }
 
     public void setGui(ChessGUI gui) {
@@ -240,11 +245,6 @@ public class ChessGame {
         }
         board.promotePawn(row, col, newPiece);
         gui.logMessage(currentPlayer + " promoted pawn to a " + choice + ".");
-    }
-    
-    public static void main(String[] args) {
-        // GUI's constructor and event listeners will handle the proper start of the game
-        SwingUtilities.invokeLater(ChessGUI::new);
     }
     
     public List<Point> getLegalMovesForPiece(int startRow, int startCol) {

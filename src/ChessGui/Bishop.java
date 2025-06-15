@@ -15,20 +15,20 @@ public class Bishop extends Piece
     @Override
     public boolean canMove(int startRow, int startCol, int endRow, int endCol, Board board) 
     {
-        // Bishops move diagonally any number of squares.
+        // Bishops move diagonally any number of squares
 
         // Check if the move is diagonal. The absolute difference in rows must equal
-        // the absolute difference in columns.
+        // the absolute difference in columns
         if (Math.abs(endRow - startRow) != Math.abs(endCol - startCol)) 
         {
             return false; // Not a diagonal move.
         }
 
-        // Determine the direction of movement (up-left, up-right, down-left, down-right).
+        // Determine the direction of movement (up-left, up-right, down-left, down-right)
         int rowStep = (endRow > startRow) ? 1 : -1;
         int colStep = (endCol > startCol) ? 1 : -1;
 
-        // Check for any pieces obstructing the path.
+        // Check for any pieces obstructing the path
         int currentRow = startRow + rowStep;
         int currentCol = startCol + colStep;
 
@@ -36,7 +36,7 @@ public class Bishop extends Piece
         {
             if (board.getPiece(currentRow, currentCol) != null) 
             {
-                return false; // There's a piece in the way.
+                return false; // There's a piece in the way
             }
             currentRow += rowStep;
             currentCol += colStep;
