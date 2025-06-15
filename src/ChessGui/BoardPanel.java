@@ -90,7 +90,7 @@ public class BoardPanel extends JPanel {
         g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
 
-    // Draws piece icons
+    // Draw piece icons
     private void drawPiece(Graphics2D g, int row, int col) {
         Piece piece = board.getPiece(row, col);
         if (piece != null) {
@@ -131,6 +131,7 @@ public class BoardPanel extends JPanel {
             int col = e.getX() / TILE_SIZE;
             int row = e.getY() / TILE_SIZE;
 
+            // Picking up piece
             Piece clickedPiece = board.getPiece(row, col);
             if (clickedPiece != null && clickedPiece.getColor().equals(game.getCurrentPlayer())) {
                 selectedPiece = clickedPiece;

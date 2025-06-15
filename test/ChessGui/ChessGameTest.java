@@ -30,7 +30,7 @@ public class ChessGameTest {
 
     @After
     public void tearDown() {
-        // Close the GUI window to free resources, important for batch test runs.
+        // Close the GUI window to free resources
         if (gui != null) {
             gui.dispose();
         }
@@ -162,7 +162,5 @@ public class ChessGameTest {
         game.attemptMove(3, 4, 2, 3); // White captures en passant
         assertTrue("White pawn should be at d6.", board.getPiece(2, 3) instanceof Pawn);
         assertNull("Captured black pawn at d5 should be removed.", board.getPiece(3, 3));
-    }
-    
-
+    }    
 }

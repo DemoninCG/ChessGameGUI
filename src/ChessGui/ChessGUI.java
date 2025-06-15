@@ -26,18 +26,20 @@ public class ChessGUI extends JFrame {
         setTitle("Java Chess");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
-        setLayout(new BorderLayout(5, 5)); // Add some gaps
+        setLayout(new BorderLayout(5, 5));
 
         statusLabel = new JLabel("Welcome to Chess! Click 'New Game' to begin.", SwingConstants.CENTER);
         statusLabel.setFont(new Font("Arial", Font.BOLD, 16));
         add(statusLabel, BorderLayout.NORTH);
 
+        // Main game board
         boardPanel = new BoardPanel(game);
         add(boardPanel, BorderLayout.CENTER);
 
-        JPanel sidePanel = new JPanel(new BorderLayout(0, 10)); // Vertical gap
-        sidePanel.setPreferredSize(new Dimension(350, 0)); // Wider panel
-        sidePanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5)); // Add padding
+        // Side panel with info log
+        JPanel sidePanel = new JPanel(new BorderLayout(0, 10));
+        sidePanel.setPreferredSize(new Dimension(350, 0));
+        sidePanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5));
 
         moveLogArea = new JTextArea();
         moveLogArea.setEditable(false);
@@ -51,6 +53,7 @@ public class ChessGUI extends JFrame {
 
         JPanel buttonPanel = new JPanel(new GridLayout(2, 2, 5, 5)); // 2x2 grid for buttons
         
+        // Buttons
         newGameButton = new JButton("New Game");
         newGameButton.addActionListener(e -> new Thread(game::startGame).start());
         buttonPanel.add(newGameButton);
@@ -122,10 +125,7 @@ public class ChessGUI extends JFrame {
         });
     }
 
-    /**
-     * Toggles the state of all control buttons based on whether a game is active.
-     * @param inProgress True if a game is being played, false otherwise.
-     */
+    // Toggles the state of all control buttons based on whether a game is active
     public void setGameInProgress(boolean inProgress) {
         newGameButton.setEnabled(!inProgress);
         viewHistoryButton.setEnabled(!inProgress);

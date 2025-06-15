@@ -19,7 +19,7 @@ public class ChessGame {
     private String whitePlayerName;
     private String blackPlayerName;
     private int gameResult = 0; // 1=white win, 0=draw, -1=black win
-    private boolean isGameOver = true; // Game is over until "New Game" is clicked
+    private boolean isGameOver = true; // Game is over until New Game is clicked
 
     private ChessGUI gui;
 
@@ -66,7 +66,7 @@ public class ChessGame {
         gui.updateBoard();
     }
 
-    // Returns true if names were entered successfully, false if cancelled.
+    // Returns true if names were entered successfully, false if cancelled
     private boolean promptForPlayerNames() {
         // Get White player's name
         while (true) {

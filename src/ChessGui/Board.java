@@ -112,7 +112,7 @@ public class Board
         squares[endRow][endCol] = pieceToMove;
         squares[startRow][startCol] = null;
 
-        if (isAttemptingEnPassant) {
+        if (isAttemptingEnPassant) { // En passant attempt
             capturedPieceRow = startRow; capturedPieceCol = endCol;
             actualCapturedPiece = getPiece(capturedPieceRow, capturedPieceCol);
             if (actualCapturedPiece instanceof Pawn && !actualCapturedPiece.getColor().equals(pieceToMove.getColor())) {
@@ -123,6 +123,7 @@ public class Board
             capturedPieceRow = endRow; capturedPieceCol = endCol;
         }
 
+        // Can't make moves that would put the king in check
         if (isKingInCheck(pieceToMove.getColor())) {
             squares[startRow][startCol] = pieceToMove;
             squares[endRow][endCol] = isAttemptingEnPassant ? null : destinationPiece;
@@ -140,7 +141,7 @@ public class Board
 
         if (pieceToMove instanceof King) {
             ((King) pieceToMove).setHasMoved(true);
-            if (Math.abs(endCol - startCol) == 2) { // Castling move
+            if (Math.abs(endCol - startCol) == 2) { // Castling
                 int rookStartCol = (endCol > startCol) ? 7 : 0;
                 int rookEndCol = (endCol > startCol) ? 5 : 3;
                 Piece rook = getPiece(startRow, rookStartCol);
@@ -224,7 +225,7 @@ public class Board
         return false;
     }
 
-
+    // Checks each square for the king
     private int[] findKing(String color) 
     {
         for (int row = 0; row < SIZE; row++) 
@@ -251,6 +252,7 @@ public class Board
         int kingRow = kingPosition[0];
         int kingCol = kingPosition[1];
 
+        // Checks each square for a piece that has a valid move to the king's square
         String opponentColor = (color.equals("white")) ? "black" : "white";
         for (int row = 0; row < SIZE; row++) 
         {

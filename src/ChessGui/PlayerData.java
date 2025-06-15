@@ -309,6 +309,126 @@ public class PlayerData {
             try { dbConnection.setAutoCommit(true); } catch (SQLException ex) { /* ignore */ }
         }
     }
+    
+    // Debug functions, not accessible by players but useful for viewing/modifying the database if needed
+    
+    // Prints the full list of players and their stats to the console
+    public void debugPrintAllPlayers() {
+        System.out.println("\n--- DEBUG: PLAYER LIST ---");
+        String sql = "SELECT name, wins, losses, ties, elo FROM " + PLAYERS_TABLE_NAME + " ORDER BY elo DESC";
+
+        try (Statement stmt = dbConnection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (!rs.isBeforeFirst()) { // Check if the result set is empty
+                System.out.println("No players found in the database.");
+                return;
+            }
+
+            System.out.println(String.format("%-15s | %-10s | %-5s | %-5s | %-5s", "Name", "Elo", "W", "L", "T"));
+            System.out.println("----------------+------------+-------+-------+-------");
+
+            while (rs.next()) {
+                String name = rs.getString("name");
+                double elo = rs.getDouble("elo");
+                int wins = rs.getInt("wins");
+                int losses = rs.getInt("losses");
+                int ties = rs.getInt("ties");
+                System.out.println(String.format("%-15s | %-10.1f | %-5d | %-5d | %-5d", name, elo, wins, losses, ties));
+            }
+
+        } catch (SQLException e) {
+            handleSQLException(e, "Debug function 'debugPrintAllPlayers' failed.");
+        }
+        System.out.println("--- END PLAYER LIST ---\n");
+    }
+
+    // Prints the full list of all matches played to the console
+    public void debugPrintAllMatches() {
+        System.out.println("\n--- DEBUG: MATCH HISTORY (ALL) ---");
+        String sql = "SELECT match_id, white_player_name, black_player_name, winner_name FROM " + MATCHES_TABLE_NAME + " ORDER BY match_id ASC";
+
+        try (Statement stmt = dbConnection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            
+            if (!rs.isBeforeFirst()) {
+                System.out.println("No matches found in the database.");
+                return;
+            }
+            
+            System.out.println(String.format("%-5s | %-15s | %-15s | %-15s", "ID", "White", "Black", "Result"));
+            System.out.println("------+-----------------+-----------------+-----------------");
+
+            while (rs.next()) {
+                int id = rs.getInt("match_id");
+                String white = rs.getString("white_player_name");
+                String black = rs.getString("black_player_name");
+                String winner = rs.getString("winner_name");
+                
+                String result = (winner == null) ? "Draw" : winner + " won";
+                
+                System.out.println(String.format("%-5d | %-15s | %-15s | %-15s", id, white, black, result));
+            }
+
+        } catch (SQLException e) {
+            handleSQLException(e, "Debug function 'debugPrintAllMatches' failed.");
+        }
+        System.out.println("--- END MATCH HISTORY ---\n");
+    }
+
+    // Adds a new player with a given name and default stats (does nothing if a player with that name already exists)
+    public void debugAddPlayer(String playerName) {
+        // First check if player exists
+        String checkSql = "SELECT name FROM " + PLAYERS_TABLE_NAME + " WHERE name = ?";
+        try (PreparedStatement checkPstmt = dbConnection.prepareStatement(checkSql)) {
+            checkPstmt.setString(1, playerName);
+            ResultSet rs = checkPstmt.executeQuery();
+            if (rs.next()) {
+                System.out.println("DEBUG: Player '" + playerName + "' already exists. No action taken.");
+                return;
+            }
+        } catch (SQLException e) {
+            handleSQLException(e, "Debug function 'debugAddPlayer' failed during check for player '" + playerName + "'.");
+            return; // Exit if check fails
+        }
+        
+        // Player does not exist, so add them
+        System.out.println("DEBUG: Attempting to add new player '" + playerName + "'...");
+        String insertSql = "INSERT INTO " + PLAYERS_TABLE_NAME + " (name, elo) VALUES (?, ?)";
+        try (PreparedStatement insertPstmt = dbConnection.prepareStatement(insertSql)) {
+            insertPstmt.setString(1, playerName);
+            insertPstmt.setDouble(2, DEFAULT_ELO);
+            int rowsAffected = insertPstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("DEBUG: Successfully added player '" + playerName + "' with default Elo of " + DEFAULT_ELO);
+            } else {
+                System.out.println("DEBUG: Failed to add player '" + playerName + "'.");
+            }
+        } catch (SQLException e) {
+            handleSQLException(e, "Debug function 'debugAddPlayer' failed during insertion of player '" + playerName + "'.");
+        }
+    }
+
+    // Manually sets the Elo rating for a specific player
+    public void debugSetPlayerElo(String playerName, double newElo) {
+        System.out.println("DEBUG: Attempting to set Elo for '" + playerName + "' to " + newElo + "...");
+        String sql = "UPDATE " + PLAYERS_TABLE_NAME + " SET elo = ? WHERE name = ?";
+        try (PreparedStatement pstmt = dbConnection.prepareStatement(sql)) {
+            pstmt.setDouble(1, newElo);
+            pstmt.setString(2, playerName);
+            
+            int rowsAffected = pstmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                System.out.println("DEBUG: Successfully updated Elo for '" + playerName + "'.");
+            } else {
+                System.out.println("DEBUG: Player '" + playerName + "' not found. No Elo update was performed.");
+            }
+            
+        } catch (SQLException e) {
+            handleSQLException(e, "Debug function 'debugSetPlayerElo' failed for player '" + playerName + "'.");
+        }
+    }
 
     // Helper methods
 
